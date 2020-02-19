@@ -7,5 +7,6 @@ import (
 
 func main() {
 	fmt.Println("heimdall service")
-	server.Serve()
+	srv := server.New()
+	srv.Serve()
 }
