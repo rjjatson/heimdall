@@ -2,12 +2,11 @@ package model
 
 // EchoRequest request for echo from client
 type EchoRequest struct {
-	Request
-	Message string `type:"message"`
+	Version string `json:"version"`
+	Message string `json:"message"`
 }
 
 // EchoResponse response for echo from server
 type EchoResponse struct {
-	Response
-	Message string `type:"message"`
+	Message string `json:"message"`
 }

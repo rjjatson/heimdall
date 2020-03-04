@@ -30,8 +30,7 @@ func (r *Router) Route(msgPayload []byte) {
 		logrus.Error("unable to unmarshal request ", err)
 		return
 	}
-	rw := NewResponseWriter(requestSign.SenderID, r.outbound)
-
+	rw := NewResponseWriter(requestSign.Type, requestSign.ID, requestSign.SenderID, r.outbound)
 	if r.handlers[requestSign.Type] == nil {
 		logrus.WithFields(
 			logrus.Fields{"type": requestSign.Type}).
@@ -52,14 +51,19 @@ func (r *Router) Add(msgType string, handler func([]byte, *ResponseWriter)) {
 
 // ResponseWriter writes to client
 type ResponseWriter struct {
-	receiverID string
-	outbound   chan []byte
+	messageID   string
+	receiverID  string
+	messageType string
+	outbound    chan []byte
 }
 
 // NewResponseWriter create response writer for sending message
-func NewResponseWriter(receiverID string, outbound chan []byte) *ResponseWriter {
+func NewResponseWriter(messageType, messageID, receiverID string, outbound chan []byte) *ResponseWriter {
 	return &ResponseWriter{
-		receiverID: receiverID,
+		messageType: messageType,
+		receiverID:  receiverID,
+		messageID:   messageID,
+		outbound:    outbound,
 	}
 }
 
@@ -67,12 +71,23 @@ func NewResponseWriter(receiverID string, outbound chan []byte) *ResponseWriter 
 func (resp *ResponseWriter) WriteResponse(msg interface{}) {
 	// convert interface to byte
 	// send to hub's outbound
+	logrus.Debug("start writing response")
 	b, err := json.Marshal(msg)
 	if err != nil {
 		logrus.Error("error marshalling response ", err)
 	}
+
+	var f interface{}
+	json.Unmarshal(b, &f)
+	m := f.(map[string]interface{})
+	m[model.MessageIDJSONTag] = resp.messageID
+	m[model.ReceiverIDJSONTag] = resp.receiverID
+	m[model.MessageTypeJSONTag] = resp.messageType
+
+	respMsg, _ := json.Marshal(m)
+
 	go func() {
-		resp.outbound <- b
+		resp.outbound <- respMsg
 	}()
 }
 

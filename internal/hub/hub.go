@@ -1,7 +1,9 @@
 package hub
 
 import (
+	"encoding/json"
 	"heimdall/internal/client"
+	"heimdall/internal/model"
 	"heimdall/internal/router"
 
 	"github.com/sirupsen/logrus"
@@ -40,8 +42,29 @@ func (h *Hub) listen() {
 				logrus.Fields{"package": "hub", "message": string(msg)}).
 				Debug("incoming message")
 			h.router.Route(msg)
+		case msg := <-h.outbound:
+			logrus.WithFields(
+				logrus.Fields{"package": "hub", "message": string(msg)}).
+				Debug("outgoing message")
+			h.Send(msg)
 		}
 	}
+}
+
+// Send send message to client
+func (h *Hub) Send(msg []byte) {
+	var resp model.Response
+	json.Unmarshal(msg, &resp)
+
+	c := h.clients[resp.ReceiverID]
+	if c == nil {
+		logrus.WithFields(
+			logrus.Fields{"package": "hub", "client_id": resp.ReceiverID}).
+			Error("client nout found")
+		return
+	}
+
+	c.SendMessage(msg)
 }
 
 // AddClient to the hub

@@ -25,6 +25,7 @@ func New() *Server {
 	inbound := make(chan []byte, 1)
 	outbound := make(chan []byte, 1)
 	router := router.New(outbound)
+
 	router.Add("echo", handler.HandleEcho) // todo : move to separated file
 
 	hub := hub.New(router, inbound, outbound)

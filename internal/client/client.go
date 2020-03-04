@@ -13,6 +13,7 @@ func New(userID string, c *websocket.Conn, inbound chan []byte) *Client {
 		userID:     userID,
 		connection: c,
 		inbound:    inbound,
+		outbound:   make(chan []byte, 0),
 	}
 }
 
