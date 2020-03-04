@@ -3,7 +3,9 @@ package server
 import (
 	"flag"
 	"heimdall/internal/client"
+	"heimdall/internal/handler"
 	"heimdall/internal/hub"
+	"heimdall/internal/router"
 	"log"
 	"net/http"
 
@@ -21,7 +23,11 @@ var addr = flag.String("addr", ":8080", "http service address")
 // New create new server
 func New() *Server {
 	inbound := make(chan []byte, 1)
-	hub := hub.New(inbound)
+	outbound := make(chan []byte, 1)
+	router := router.New(outbound)
+	router.Add("echo", handler.HandleEcho) // todo : move to separated file
+
+	hub := hub.New(router, inbound, outbound)
 	hub.Run()
 	return &Server{
 		hub: hub,
@@ -52,9 +58,9 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := client.New(conn, s.hub.GetInbound())
+	c := client.New("123", conn, s.hub.GetInbound()) // todo remove hardcode userID
 	c.Run()
-	s.hub.AddClient("123", c) // todo remove hardcode
+	s.hub.AddClient(c)
 
 	err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connectNotif","id":0}`))
 	if err != nil {

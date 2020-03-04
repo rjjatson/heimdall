@@ -2,13 +2,18 @@ package hub
 
 import (
 	"heimdall/internal/client"
-	"log"
+	"heimdall/internal/router"
+
+	"github.com/sirupsen/logrus"
 )
 
 // New create new hub
-func New(inbound chan []byte) *Hub {
+func New(router *router.Router, inbound chan []byte, outbound chan []byte) *Hub {
 	return &Hub{
-		inbound: inbound,
+		router:   router,
+		inbound:  inbound,
+		outbound: outbound,
+		clients:  make(map[string]*client.Client),
 	}
 	// todo inject inbound channel
 
@@ -16,9 +21,10 @@ func New(inbound chan []byte) *Hub {
 
 // Hub connects server and client
 type Hub struct {
+	router   *router.Router
 	clients  map[string]*client.Client
 	inbound  chan []byte
-	outbound chan interface{}
+	outbound chan []byte
 }
 
 // Run starts hub processing
@@ -30,14 +36,17 @@ func (h *Hub) listen() {
 	for {
 		select {
 		case msg := <-h.inbound:
-			log.Println(string(msg))
+			logrus.WithFields(
+				logrus.Fields{"package": "hub", "message": string(msg)}).
+				Debug("incoming message")
+			h.router.Route(msg)
 		}
 	}
 }
 
 // AddClient to the hub
-func (h *Hub) AddClient(userID string, client *client.Client) {
-
+func (h *Hub) AddClient(c *client.Client) {
+	h.clients[c.GetUserID()] = c
 }
 
 // RemoveClient removes client from client list
