@@ -2,8 +2,8 @@ package handler
 
 import (
 	"encoding/json"
-	"heimdall/internal/model"
 	"heimdall/internal/router"
+	"heimdall/pkg/model"
 
 	"github.com/sirupsen/logrus"
 )

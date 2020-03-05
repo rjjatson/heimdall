@@ -1,6 +1,9 @@
 package model
 
 const (
+	// SenderIDJSONTag json tag
+	SenderIDJSONTag = "sender_id"
+
 	// ReceiverIDJSONTag json tag
 	ReceiverIDJSONTag = "receiver_id"
 	// MessageIDJSONTag json tag

@@ -1,10 +1,12 @@
 package client
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 // New create new client
@@ -25,10 +27,11 @@ const (
 
 // Client manages client communication
 type Client struct {
-	connection *websocket.Conn
-	userID     string
-	inbound    chan []byte
-	outbound   chan []byte
+	autheticated bool
+	connection   *websocket.Conn
+	userID       string
+	inbound      chan []byte
+	outbound     chan []byte
 }
 
 // SendMessage asynchronously send messge to outbound channel
@@ -49,6 +52,11 @@ func (c *Client) Run() {
 	go c.write()
 }
 
+// SetAuthentication set authentication status of a client
+func (c *Client) SetAuthentication(s bool) {
+	c.autheticated = s
+}
+
 func (c *Client) listen() {
 	defer func() {
 		c.connection.Close()
@@ -62,7 +70,22 @@ func (c *Client) listen() {
 			log.Println(err)
 			break
 		}
-		c.inbound <- msg
+
+		// todo: add request signature
+		var f interface{}
+		err = json.Unmarshal(msg, &f)
+		if err != nil {
+			logrus.Error("error unmarshaling request")
+			continue
+		}
+		m := f.(map[string]interface{})
+		m["sender_id"] = c.GetUserID()
+
+		// todo add authorization checking layer to be sent to router
+
+		requestMessage, _ := json.Marshal(m)
+
+		c.inbound <- requestMessage
 	}
 }
 

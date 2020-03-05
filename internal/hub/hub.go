@@ -2,9 +2,11 @@ package hub
 
 import (
 	"encoding/json"
+	"fmt"
 	"heimdall/internal/client"
-	"heimdall/internal/model"
 	"heimdall/internal/router"
+	"heimdall/pkg/model"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 )
@@ -15,16 +17,13 @@ func New(router *router.Router, inbound chan []byte, outbound chan []byte) *Hub 
 		router:   router,
 		inbound:  inbound,
 		outbound: outbound,
-		clients:  make(map[string]*client.Client),
 	}
-	// todo inject inbound channel
-
 }
 
 // Hub connects server and client
 type Hub struct {
 	router   *router.Router
-	clients  map[string]*client.Client
+	clients  sync.Map
 	inbound  chan []byte
 	outbound chan []byte
 }
@@ -56,25 +55,33 @@ func (h *Hub) Send(msg []byte) {
 	var resp model.Response
 	json.Unmarshal(msg, &resp)
 
-	c := h.clients[resp.ReceiverID]
-	if c == nil {
+	c, err := h.GetClient(resp.ReceiverID) // todo change to syncmap
+	if err != nil {
 		logrus.WithFields(
 			logrus.Fields{"package": "hub", "client_id": resp.ReceiverID}).
-			Error("client nout found")
+			Error(err)
 		return
 	}
-
 	c.SendMessage(msg)
 }
 
+// GetClient obtain client with selected user ID
+func (h *Hub) GetClient(id string) (*client.Client, error) {
+	c, ok := h.clients.Load(id)
+	if !ok {
+		return nil, fmt.Errorf("client not found")
+	}
+	return c.(*client.Client), nil
+}
+
 // AddClient to the hub
-func (h *Hub) AddClient(c *client.Client) {
-	h.clients[c.GetUserID()] = c
+func (h *Hub) AddClient(id string, c *client.Client) {
+	h.clients.Store(id, c)
 }
 
 // RemoveClient removes client from client list
-func (h *Hub) RemoveClient(userID string) {
-
+func (h *Hub) RemoveClient(id string) {
+	h.clients.Delete(id)
 }
 
 // GetInbound gets inbound channel of hub

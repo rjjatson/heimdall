@@ -2,7 +2,7 @@ package router
 
 import (
 	"encoding/json"
-	"heimdall/internal/model"
+	"heimdall/pkg/model"
 
 	"github.com/sirupsen/logrus"
 )
@@ -81,8 +81,11 @@ func (resp *ResponseWriter) WriteResponse(msg interface{}) {
 	json.Unmarshal(b, &f)
 	m := f.(map[string]interface{})
 	m[model.MessageIDJSONTag] = resp.messageID
-	m[model.ReceiverIDJSONTag] = resp.receiverID
 	m[model.MessageTypeJSONTag] = resp.messageType
+
+	if resp.receiverID == "" {
+		m[model.ReceiverIDJSONTag] = resp.receiverID
+	}
 
 	respMsg, _ := json.Marshal(m)
 
